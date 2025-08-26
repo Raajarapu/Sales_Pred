@@ -1,58 +1,41 @@
 import streamlit as st
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error, r2_score
 import matplotlib.pyplot as plt
 
-st.title("📊 Sales Prediction App")
+# App title
+st.title("📊 Sales Data EDA App")
 
-# File uploader
+# Upload CSV
 uploaded_file = st.file_uploader("Upload your Sales CSV file", type=["csv"])
 
 if uploaded_file is not None:
-    data = pd.read_csv(uploaded_file)
-    st.subheader("📂 Dataset Preview")
-    st.write(data.head())
+    df = pd.read_csv(uploaded_file)
+    st.success("CSV uploaded successfully!")
 
-    # Select features and target
-    all_columns = data.columns.tolist()
-    target_col = st.selectbox("Select Target Column (Y)", all_columns)
-    feature_cols = st.multiselect("Select Feature Columns (X)", [c for c in all_columns if c != target_col])
+    # Show raw data
+    st.subheader("Dataset Preview")
+    st.dataframe(df.head())
 
-    if target_col and feature_cols:
-        X = data[feature_cols]
-        y = data[target_col]
+    # Show summary
+    st.subheader("Summary Statistics")
+    st.write(df.describe())
 
-        # Split data
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    # Column selection for plotting
+    st.subheader("Visualizations")
+    numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
 
-        # Train model
-        model = LinearRegression()
-        model.fit(X_train, y_train)
+    if len(numeric_cols) >= 2:
+        x_axis = st.selectbox("Choose X-axis", options=numeric_cols)
+        y_axis = st.selectbox("Choose Y-axis", options=numeric_cols)
 
-        # Predictions
-        y_pred = model.predict(X_test)
-
-        st.subheader("📈 Model Evaluation")
-        st.write(f"Mean Squared Error: {mean_squared_error(y_test, y_pred):.2f}")
-        st.write(f"R² Score: {r2_score(y_test, y_pred):.2f}")
-
-        # Scatter plot
         fig, ax = plt.subplots()
-        ax.scatter(y_test, y_pred)
-        ax.set_xlabel("Actual Sales")
-        ax.set_ylabel("Predicted Sales")
-        ax.set_title("Actual vs Predicted")
+        ax.scatter(df[x_axis], df[y_axis], alpha=0.6)
+        ax.set_xlabel(x_axis)
+        ax.set_ylabel(y_axis)
+        ax.set_title(f"{x_axis} vs {y_axis}")
         st.pyplot(fig)
+    else:
+        st.warning("Not enough numeric columns for scatter plot.")
 
-        # Try new prediction
-        st.subheader("🔮 Make a New Prediction")
-        input_data = []
-        for col in feature_cols:
-            value = st.number_input(f"Enter {col}", float(data[col].min()), float(data[col].max()))
-            input_data.append(value)
-
-        if st.button("Predict Sales"):
-            result = model.predict([input_data])[0]
-            st.success(f"Predicted Sales: {result:.2f}")
+else:
+    st.info("Please upload a CSV file to start.")
